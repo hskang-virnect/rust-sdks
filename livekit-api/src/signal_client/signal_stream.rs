@@ -28,16 +28,47 @@ use tokio_tungstenite::{
     tungstenite::error::ProtocolError,
     tungstenite::{Error as WsError, Message},
     MaybeTlsStream, WebSocketStream,
+    Connector,
 };
 
-#[cfg(feature = "__signal-client-async-compatible")]
-use async_tungstenite::{
-    async_std::connect_async,
-    async_std::ClientStream as MaybeTlsStream,
-    tungstenite::error::ProtocolError,
-    tungstenite::{Error as WsError, Message},
-    WebSocketStream,
-};
+#[cfg(feature = "signal-client-tokio")]
+use std::sync::Arc;
+
+#[cfg(feature = "signal-client-tokio")]
+use tokio_rustls::rustls::{self, Certificate, RootCertStore, ClientConfig};
+
+#[cfg(feature = "signal-client-tokio")]
+const MY_ROOT_CA_PEM: &str = r#"-----BEGIN CERTIFICATE-----
+MIIFZTCCA02gAwIBAgIUaSlceVPrLNjG+aB7y3KzIakqIMswDQYJKoZIhvcNAQEL
+BQAwQjELMAkGA1UEBhMCS1IxDjAMBgNVBAgMBVNlb3VsMRAwDgYDVQQKDAdWSVJO
+RUNUMREwDwYDVQQDDAhNeVJvb3RDQTAeFw0yNTA1MjIwMzAzMDJaFw0zNTA1MjAw
+MzAzMDJaMEIxCzAJBgNVBAYTAktSMQ4wDAYDVQQIDAVTZW91bDEQMA4GA1UECgwH
+VklSTkVDVDERMA8GA1UEAwwITXlSb290Q0EwggIiMA0GCSqGSIb3DQEBAQUAA4IC
+DwAwggIKAoICAQCa39VbSYoulBP0huSSHKoKOsxQHOx9ws4gi4UI+kAJJ7UOXabv
+S3i5tvQkdo2JOr0w/0FE/XbNYuyOtjf6alI08M45OIYlYESQpbQw8OtLbS3By7aM
+YJmTIiUYR/dhb7LrP2Y5HjS8wWw/LVdqzTBaI3++AyktabGQGCj1v5M/Zy+XiBU/
+IgXgHHskJUSk3fV8PvLoXeSyoGczkkavmTeiSTRTxTWEPM36IGqdM/pGwANhmEfq
+yKoYbIZhTgCJmFsSVWfBxpGaK9OCDN7zVhmZKPsnor3Gr7w31QzHhO9lMX1eefbL
+735EGFZPPkIdZ4BdAp7zEhX0vWaS6f98VLmHUzLdGS0FmGEJRNtSY8+ZZsZwl9ZI
+KPHy3M8eYWghwxWm8NRGiOQX/1hoJokqUiMcRA8IOQ5ZRwHysyI+ASZ6KvfYGjpK
+HxroKgHszSOZA+EIqyUtpHhMgsTvlOtpitInkzQ7WjIXnzqqh0+AmTBz9fGQlNzS
++eEVUWwgDg1HmByvi7Mp2VFZHGSq1+CRftffQRqlNX4r70rkXO35KEbZ5NHvCUTX
+QINood90AK3KT/Xe3PkTPB4a47lHSA6KNCc3dVCP5KmQmOS+1Oku2qPGMj79Lr0x
+m0ne4FSk/HAOwDr/IA7t2mTJIr0IfOvurwQN8EvuJRDNf/Tb5o8l28knwwIDAQAB
+o1MwUTAdBgNVHQ4EFgQUfme/s9iYcGzE+CCuBogXysUg4wwwHwYDVR0jBBgwFoAU
+fme/s9iYcGzE+CCuBogXysUg4wwwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0B
+AQsFAAOCAgEAS7HZW0j2Fquwf+Fg81WBNsCNuL3K1vfhoQZScl+/VupkQCKxF4p0
+Z9ttxQj0zPQQAC5U8mSbynk7gSGEJ2JlvKKcOCTnZLNlnMmTWPmvtRap821Ogg3z
+93p/+StdRWbEplLK8N1KefE+kWAaHjSe4WiBeuvdLntDiuHXF7ap+U6j6PIoNQ6A
+Qu8RMsnPgOnsUZQlmi/bo2rtm3M2MT6c/HGtkcBVrl/dlh34AFwIeAN17V+fzJHV
+Iflm5uyYvPUiMVfEnysD9b6+jektvKb4FGX+Sv+NEab3nElNzbG90Ur36GWGBAUn
+cJqLX9aS/9bwSYIreIv9NiBtgXx6jTlefsPMO4MXXcrqZPKo9rkDQ9wf1OFfk9+r
+KFugtz03+/KnhTpEzQGp8tqhxciAZn7F1xaYHEf5IA2thrqtRVZ81LWqq7iPnAtq
+RLW2lGHuMOWUCda2ZizPNo9RvD6pl+haeI9DwxxGsl6zXHRsEMBiuK5jsa0iZ4Iu
+Lk/KK3r2NR+Gj1gSmH9oiL/gywVtrE67uHFiLMubs2EywcgjrpK/gLHnO/LOyAAW
+kEMdRh8IAqEncZb5LwztoJLseVRLpbqpCoup8c6t3qEF09R0bUH5WRAfJizeLkyR
+gAxN2l3EiBew4eD+pRkURa7BO7nCprS9Biasa8eRw8LndRPJeHmmFnw=
+-----END CERTIFICATE-----"#;
 
 use super::{SignalError, SignalResult};
 
@@ -96,7 +127,30 @@ impl SignalStream {
             log::info!("connecting to {}", url);
         }
 
-        let (ws_stream, _) = connect_async(url).await?;
+        #[cfg(feature = "signal-client-tokio")]
+        let ws_stream = {
+            if url.scheme() == "wss" {
+                // Parse the PEM and add to root store
+                let mut root_store = RootCertStore::empty();
+                let certs = rustls_pemfile::certs(&mut MY_ROOT_CA_PEM.as_bytes())
+                    .expect("invalid PEM");
+                for cert in certs {
+                    root_store.add(&Certificate(cert)).expect("failed to add cert");
+                }
+                let mut config = ClientConfig::builder()
+                    .with_safe_defaults()
+                    .with_root_certificates(root_store)
+                    .with_no_client_auth();
+                let connector = Connector::Rustls(Arc::new(config));
+                tokio_tungstenite::connect_async_tls_with_config(url, None, Some(connector)).await?
+            } else {
+                connect_async(url).await?
+            }
+        };
+
+        #[cfg(not(feature = "signal-client-tokio"))]
+        let ws_stream = connect_async(url).await?;
+
         let (ws_writer, ws_reader) = ws_stream.split();
 
         let (emitter, events) = mpsc::unbounded_channel();
