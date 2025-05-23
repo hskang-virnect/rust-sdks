@@ -132,24 +132,30 @@ impl SignalStream {
             if url.scheme() == "wss" {
                 // Parse the PEM and add to root store
                 let mut root_store = RootCertStore::empty();
-                let certs = rustls_pemfile::certs(&mut MY_ROOT_CA_PEM.as_bytes())
-                    .expect("invalid PEM");
+                let mut pem = MY_ROOT_CA_PEM.as_bytes();
+                let certs: Vec<_> = rustls_pemfile::certs(&mut pem)
+                    .collect();
                 for cert in certs {
-                    root_store.add(&Certificate(cert)).expect("failed to add cert");
+                    let cert = cert.map_err(|_| SignalError::ConnectError("invalid PEM".into()))?;
+                    root_store.add(&Certificate(cert.into_vec())).map_err(|_| SignalError::ConnectError("failed to add cert".into()))?;
                 }
-                let mut config = ClientConfig::builder()
-                    .with_safe_defaults()
+                let config = ClientConfig::builder()
                     .with_root_certificates(root_store)
                     .with_no_client_auth();
                 let connector = Connector::Rustls(Arc::new(config));
-                tokio_tungstenite::connect_async_tls_with_config(url, None, Some(connector)).await?
+                let (ws_stream, _) = tokio_tungstenite::connect_async_tls_with_config(url, None, false, Some(connector)).await?;
+                ws_stream
             } else {
-                connect_async(url).await?
+                let (ws_stream, _) = connect_async(url).await?;
+                ws_stream
             }
         };
 
         #[cfg(not(feature = "signal-client-tokio"))]
-        let ws_stream = connect_async(url).await?;
+        let ws_stream = {
+            let (ws_stream, _) = connect_async(url).await?;
+            ws_stream
+        };
 
         let (ws_writer, ws_reader) = ws_stream.split();
 
