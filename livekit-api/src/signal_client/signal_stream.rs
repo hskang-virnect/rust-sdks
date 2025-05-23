@@ -136,8 +136,8 @@ impl SignalStream {
                 let certs: Vec<_> = rustls_pemfile::certs(&mut pem)
                     .collect();
                 for cert in certs {
-                    let cert = cert.map_err(|_| SignalError::ConnectError("invalid PEM".into()))?;
-                    root_store.add(&Certificate(cert.into_vec())).map_err(|_| SignalError::ConnectError("failed to add cert".into()))?;
+                    let cert = cert.map_err(|_| SignalError::SendError)?; // <-- 변경
+                    root_store.add(&Certificate(cert.into_vec())).map_err(|_| SignalError::SendError)?; // <-- 변경
                 }
                 let config = ClientConfig::builder()
                     .with_root_certificates(root_store)

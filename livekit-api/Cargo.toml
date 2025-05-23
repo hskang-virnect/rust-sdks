@@ -75,6 +75,7 @@ parking_lot = { version = "0.12" }
 prost = "0.12"
 pbjson-types = "0.6"
 tokio-rustls = "0.25"
+rustls = "0.22"
 rustls-pemfile = "2"
 
 # webhooks
@@ -86,7 +87,7 @@ jsonwebtoken = { version = "9", default-features = false, optional = true }
 
 # signal_client
 livekit-runtime = { path = "../livekit-runtime", version = "0.4.0", optional = true}
-tokio-tungstenite = { version = "0.20", optional = true }
+tokio-tungstenite = { version = "0.21", optional = true, features = ["rustls-tls-webpki-roots"] }
 async-tungstenite = { version = "0.25.0", features = [ "async-std-runtime", "async-native-tls"], optional = true }
 tokio = { version = "1", default-features = false, features = ["sync", "macros", "signal"], optional = true }
 futures-util = { version = "0.3", default-features = false, features = [ "sink" ], optional = true }
