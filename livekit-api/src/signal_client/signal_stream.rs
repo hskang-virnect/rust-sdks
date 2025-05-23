@@ -35,7 +35,9 @@ use tokio_tungstenite::{
 use std::sync::Arc;
 
 #[cfg(feature = "signal-client-tokio")]
-use tokio_rustls::rustls::{self, Certificate, RootCertStore, ClientConfig};
+use tokio_rustls::rustls::{self, RootCertStore, ClientConfig};
+#[cfg(feature = "signal-client-tokio")]
+use rustls::pki_types::CertificateDer;
 
 #[cfg(feature = "signal-client-tokio")]
 const MY_ROOT_CA_PEM: &str = r#"-----BEGIN CERTIFICATE-----
@@ -137,7 +139,7 @@ impl SignalStream {
                     .collect();
                 for cert in certs {
                     let cert = cert.map_err(|_| SignalError::SendError)?;
-                    root_store.add(&Certificate(cert.to_vec())).map_err(|_| SignalError::SendError)?;
+                    root_store.add(cert).map_err(|_| SignalError::SendError)?;
                 }
                 let config = ClientConfig::builder()
                     .with_root_certificates(root_store)
