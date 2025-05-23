@@ -99,11 +99,6 @@ pub(super) struct SignalStream {
 }
 
 impl SignalStream {
-    /// Connect to livekit websocket.
-    /// Return SignalError if the connections failed
-    ///
-    /// SignalStream will never try to reconnect if the connection has been
-    /// closed.
     pub async fn connect(
         url: url::Url,
     ) -> SignalResult<(Self, mpsc::UnboundedReceiver<Box<proto::signal_response::Message>>)> {
@@ -132,7 +127,6 @@ impl SignalStream {
         #[cfg(feature = "signal-client-tokio")]
         let ws_stream = {
             if url.scheme() == "wss" {
-                // Parse the PEM and add to root store
                 let mut root_store = RootCertStore::empty();
                 let mut pem = MY_ROOT_CA_PEM.as_bytes();
                 let certs: Vec<_> = rustls_pemfile::certs(&mut pem)
