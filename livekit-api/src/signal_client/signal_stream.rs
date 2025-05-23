@@ -136,8 +136,8 @@ impl SignalStream {
                 let certs: Vec<_> = rustls_pemfile::certs(&mut pem)
                     .collect();
                 for cert in certs {
-                    let cert = cert.map_err(|_| SignalError::SendError)?; // <-- 변경
-                    root_store.add(&Certificate(cert.into_vec())).map_err(|_| SignalError::SendError)?; // <-- 변경
+                    let cert = cert.map_err(|_| SignalError::SendError)?;
+                    root_store.add(&Certificate(cert.to_vec())).map_err(|_| SignalError::SendError)?;
                 }
                 let config = ClientConfig::builder()
                     .with_root_certificates(root_store)
