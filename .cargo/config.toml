@@ -17,4 +17,4 @@ rustflags = ["-C", "link-args=-ObjC"]
 rustflags = ["-C", "link-args=-ObjC"]
 
 [target.aarch64-linux-android]
-rustflags = ["-C", "common-page-size=16384", "link-arg=-Wl", "-z"]
+rustflags = ["-C", "common-page-size=16384", "link-arg=-Wl"]
