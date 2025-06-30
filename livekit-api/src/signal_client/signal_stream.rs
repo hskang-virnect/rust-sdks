@@ -49,6 +49,11 @@ use async_tungstenite::{
     WebSocketStream,
 };
 
+#[cfg(feature = "signal-client-tokio")]
+use tokio_rustls::{rustls, TlsConnector};
+#[cfg(feature = "signal-client-tokio")]
+use rustls_pemfile;
+
 use super::{SignalError, SignalResult};
 
 type WebSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
@@ -385,7 +390,7 @@ impl SignalStream {
         })?;
         let stream = MaybeTlsStream::Rustls(tls_stream);
 
-        let req = url.clone().into_client_request().map_err(WsError::Io)?;
+        let req = url.clone().into_client_request().map_err(|e| WsError::Io(io::Error::new(io::ErrorKind::Other, format!("client request error: {e}"))))?;
         let (ws_stream, _) = client_async_with_config(req, stream, None).await?;
         let (ws_writer, ws_reader) = ws_stream.split();
         let (emitter, events) = mpsc::unbounded_channel();
@@ -450,7 +455,7 @@ impl SignalStream {
         })?;
         let stream = MaybeTlsStream::Rustls(tls_stream);
 
-        let req = url.clone().into_client_request().map_err(WsError::Io)?;
+        let req = url.clone().into_client_request().map_err(|e| WsError::Io(io::Error::new(io::ErrorKind::Other, format!("client request error: {e}"))))?;
         let (ws_stream, _) = client_async_with_config(req, stream, None).await?;
         let (ws_writer, ws_reader) = ws_stream.split();
         let (emitter, events) = mpsc::unbounded_channel();
