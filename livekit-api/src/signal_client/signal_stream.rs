@@ -416,11 +416,9 @@ impl SignalStream {
         let tls_stream = connector.connect(server_name, tcp_stream).await.map_err(|e| {
             WsError::Io(io::Error::new(io::ErrorKind::Other, format!("TLS connection error: {}", e)))
         })?;
-        let stream = MaybeTlsStream::Tls(tls_stream);
-
         // Pass tls_stream directly, do not wrap in MaybeTlsStream
         let req = url.clone().into_client_request().map_err(|e| WsError::Io(io::Error::new(io::ErrorKind::Other, format!("client request error: {e}"))))?;
-        let (ws_stream, _) = client_async_with_config(req, stream, None).await?;
+        let (ws_stream, _) = client_async_with_config(req, tls_stream, None).await?;
         let (ws_writer, ws_reader) = ws_stream.split();
         let (emitter, events) = mpsc::unbounded_channel();
         let (internal_tx, internal_rx) = mpsc::channel::<InternalMessage>(8);
@@ -516,11 +514,9 @@ impl SignalStream {
         let tls_stream = connector.connect(server_name, tcp_stream).await.map_err(|e| {
             WsError::Io(io::Error::new(io::ErrorKind::Other, format!("TLS connection error: {}", e)))
         })?;
-        let stream = MaybeTlsStream::Tls(tls_stream);
-
         // Pass tls_stream directly, do not wrap in MaybeTlsStream
         let req = url.clone().into_client_request().map_err(|e| WsError::Io(io::Error::new(io::ErrorKind::Other, format!("client request error: {e}"))))?;
-        let (ws_stream, _) = client_async_with_config(req, stream, None).await?;
+        let (ws_stream, _) = client_async_with_config(req, tls_stream, None).await?;
         let (ws_writer, ws_reader) = ws_stream.split();
         let (emitter, events) = mpsc::unbounded_channel();
         let (internal_tx, internal_rx) = mpsc::channel::<InternalMessage>(8);
