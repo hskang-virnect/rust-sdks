@@ -17,7 +17,9 @@ signal-client-tokio = [
     "dep:reqwest",
     "dep:livekit-runtime",
     "livekit-runtime/tokio",
-    "dep:base64"
+    "dep:base64",
+    "dep:tokio-rustls",
+    "dep:rustls-pemfile"
 ]
 
 signal-client-async = [

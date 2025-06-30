@@ -367,14 +367,40 @@ impl SignalStream {
         let addr = format!("{}:{}", host, port);
         let tcp_stream = TokioTcpStream::connect(addr).await.map_err(WsError::Io)?;
 
-        // Parse PEM cert
+        // 시스템 인증서 + 사용자 인증서 병합
         let mut root_store = rustls::RootCertStore::empty();
-        let certs = rustls_pemfile::certs(&mut cert_pem.as_bytes())
-            .map_err(|_| WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "Invalid PEM cert")))?;
+        let mut sys_added = 0;
+        match rustls_native_certs::load_native_certs() {
+            Ok(certs) => {
+                for cert in certs {
+                    if root_store.add(&rustls::Certificate(cert.0)).is_ok() {
+                        sys_added += 1;
+                    }
+                }
+            }
+            Err(e) => {
+                log::warn!("Could not load system root certificates: {}", e);
+            }
+        }
+        if sys_added == 0 {
+            log::warn!("No system root certificates loaded; only custom certs will be used");
+        }
+
+        // 사용자 PEM 인증서 추가
+        let mut reader = cert_pem.as_bytes();
+        let certs = rustls_pemfile::certs(&mut reader)
+            .map_err(|_| WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "Invalid PEM cert (parse error)")))?;
+        let mut user_added = 0;
         for cert in certs {
-            root_store.add(&rustls::Certificate(cert)).map_err(|e| {
-                WsError::Io(io::Error::new(io::ErrorKind::Other, format!("Failed to add cert: {:?}", e)))
-            })?;
+            match root_store.add(&rustls::Certificate(cert)) {
+                Ok(_) => user_added += 1,
+                Err(e) => {
+                    log::warn!("Failed to add custom cert: {:?}", e);
+                }
+            }
+        }
+        if sys_added == 0 && user_added == 0 {
+            return Err(WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No valid certificate(s) found in system or PEM string")).into());
         }
 
         let tls_config = rustls::ClientConfig::builder()
@@ -429,17 +455,51 @@ impl SignalStream {
         let addr = format!("{}:{}", host, port);
         let tcp_stream = TokioTcpStream::connect(addr).await.map_err(WsError::Io)?;
 
-        // Parse multiple PEM certs
+        // 시스템 인증서 + 사용자 인증서 병합
         let mut root_store = rustls::RootCertStore::empty();
-        for pem in cert_pems {
-            let mut reader = pem.as_bytes();
-            let certs = rustls_pemfile::certs(&mut reader)
-                .map_err(|_| WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "Invalid PEM cert")))?;
-            for cert in certs {
-                root_store.add(&rustls::Certificate(cert)).map_err(|e| {
-                    WsError::Io(io::Error::new(io::ErrorKind::Other, format!("Failed to add cert: {:?}", e)))
-                })?;
+        let mut sys_added = 0;
+        match rustls_native_certs::load_native_certs() {
+            Ok(certs) => {
+                for cert in certs {
+                    if root_store.add(&rustls::Certificate(cert.0)).is_ok() {
+                        sys_added += 1;
+                    }
+                }
             }
+            Err(e) => {
+                log::warn!("Could not load system root certificates: {}", e);
+            }
+        }
+        if sys_added == 0 {
+            log::warn!("No system root certificates loaded; only custom certs will be used");
+        }
+
+        // 사용자 PEM 인증서 추가
+        let mut user_added = 0;
+        for (i, pem) in cert_pems.iter().enumerate() {
+            if pem.trim().is_empty() {
+                log::warn!("PEM string at index {} is empty, skipping", i);
+                continue;
+            }
+            let mut reader = pem.as_bytes();
+            let certs = match rustls_pemfile::certs(&mut reader) {
+                Ok(certs) => certs,
+                Err(_) => {
+                    log::warn!("Failed to parse PEM at index {}", i);
+                    continue;
+                }
+            };
+            for cert in certs {
+                match root_store.add(&rustls::Certificate(cert)) {
+                    Ok(_) => user_added += 1,
+                    Err(e) => {
+                        log::warn!("Failed to add custom cert at index {}: {:?}", i, e);
+                    }
+                }
+            }
+        }
+        if sys_added == 0 && user_added == 0 {
+            return Err(WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No valid certificate(s) found in system or PEM strings")).into());
         }
 
         let tls_config = rustls::ClientConfig::builder()
