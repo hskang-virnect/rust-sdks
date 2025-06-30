@@ -53,6 +53,8 @@ use async_tungstenite::{
 use tokio_rustls::{rustls, TlsConnector};
 #[cfg(feature = "signal-client-tokio")]
 use rustls_pemfile;
+#[cfg(feature = "signal-client-tokio")]
+use rustls_native_certs;
 
 use super::{SignalError, SignalResult};
 
@@ -309,7 +311,7 @@ impl SignalStream {
                     ws_stream
                 } else {
                     if url.scheme() == "wss" {
-                        let certs = &[crate::signal_client::FIRST_CERT_PEM, crate::signal_client::SECOND_CERT_PEM];
+                        let certs = &[crate::signal_client::signal_stream::FIRST_CERT_PEM, crate::signal_client::signal_stream::SECOND_CERT_PEM];
                         return Self::connect_with_certs(url, certs).await.map(|(s, e)| (s, e));
                     }
                     // No proxy specified, connect directly
