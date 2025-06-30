@@ -154,6 +154,12 @@ jobs:
 
           sudo chown -R $USER:$USER target/${{ matrix.target }}/release/
 
+      - name: Set up Android NDK
+        if: ${{ matrix.platform == 'android' }}
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: '24.0.8215888'
+
       # on android use cargo ndk
       - name: Build (Android)
         if: ${{ matrix.platform == 'android' }}
