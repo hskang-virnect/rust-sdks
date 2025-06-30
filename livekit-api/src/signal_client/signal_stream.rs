@@ -58,8 +58,6 @@ use rustls_native_certs;
 
 use super::{SignalError, SignalResult};
 
-type WebSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
-
 #[derive(Debug)]
 enum InternalMessage {
     Signal {
@@ -546,10 +544,12 @@ impl SignalStream {
 
     /// This task is used to send messages to the websocket
     /// It is also responsible for closing the connection
-    async fn write_task(
+    async fn write_task<S>(
         mut internal_rx: mpsc::Receiver<InternalMessage>,
-        mut ws_writer: SplitSink<WebSocket, Message>,
-    ) {
+        mut ws_writer: SplitSink<WebSocketStream<S>, Message>,
+    ) where
+        S: Unpin + Send + 'static,
+    {
         while let Some(msg) = internal_rx.recv().await {
             match msg {
                 InternalMessage::Signal { signal, response_chn } => {
@@ -578,11 +578,13 @@ impl SignalStream {
     /// and dispatch them through the EventEmitter.
     ///
     /// It can also send messages to [handle_write] task ( Used e.g. answer to pings )
-    async fn read_task(
+    async fn read_task<S>(
         internal_tx: mpsc::Sender<InternalMessage>,
-        mut ws_reader: SplitStream<WebSocket>,
+        mut ws_reader: SplitStream<WebSocketStream<S>>,
         emitter: mpsc::UnboundedSender<Box<proto::signal_response::Message>>,
-    ) {
+    ) where
+        S: Unpin + Send + 'static,
+    {
         while let Some(msg) = ws_reader.next().await {
             match msg {
                 Ok(Message::Binary(data)) => {
