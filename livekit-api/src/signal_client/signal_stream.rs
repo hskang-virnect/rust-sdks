@@ -549,9 +549,10 @@ impl SignalStream {
 
         let _ = internal_tx.send(InternalMessage::Close).await;
     }
+}
 
-    
-    pub const FIRST_CERT_PEM: &str = r#"
+/// Example: First certificate PEM string (for use with connect_with_certs)
+pub const FIRST_CERT_PEM: &str = r#"
 -----BEGIN CERTIFICATE-----
 MIIFpzCCA4+gAwIBAgIUBx3BRtlrXRrzeixOX574+VYhsk0wDQYJKoZIhvcNAQEL
 BQAwYzELMAkGA1UEBhMCS1IxDjAMBgNVBAgMBVNlb3VsMQ4wDAYDVQQHDAVTZW91
@@ -587,8 +588,7 @@ vn/E/SOPF79D3ss=
 -----END CERTIFICATE-----
 "#;
 
-    
-    pub const SECOND_CERT_PEM: &str = r#"
+pub const SECOND_CERT_PEM: &str = r#"
 -----BEGIN CERTIFICATE-----
 MIIFpzCCA4+gAwIBAgIUSVDDoB+HAshL0IjuPHVQ9ZYBrQEwDQYJKoZIhvcNAQEL
 BQAwYzELMAkGA1UEBhMCS1IxDjAMBgNVBAgMBVNlb3VsMQ4wDAYDVQQHDAVTZW91
