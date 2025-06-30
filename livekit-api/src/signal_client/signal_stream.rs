@@ -309,7 +309,7 @@ impl SignalStream {
                     ws_stream
                 } else {
                     if url.scheme() == "wss" {
-                        let certs = &[Self::FIRST_CERT_PEM, Self::SECOND_CERT_PEM];
+                        let certs = &[crate::signal_client::FIRST_CERT_PEM, crate::signal_client::SECOND_CERT_PEM];
                         return Self::connect_with_certs(url, certs).await.map(|(s, e)| (s, e));
                     }
                     // No proxy specified, connect directly
