@@ -106,15 +106,3 @@ isahc = { version = "1.7.2", default-features = false, features = [ "json", "tex
 
 scopeguard = "1.2.0"
 rand = "0.9.0"
-
-[dependencies.tokio-rustls]
-optional = true
-version = "*"
-
-[dependencies.rustls-pemfile]
-optional = true
-version = "*"
-
-[dependencies.rustls-native-certs]
-optional = true
-version = "*"
