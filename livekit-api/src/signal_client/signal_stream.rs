@@ -20,6 +20,7 @@ use livekit_protocol as proto;
 use livekit_runtime::{JoinHandle, TcpStream};
 use prost::Message as ProtoMessage;
 use std::{env, io};
+use std::fmt::Debug;
 
 use tokio::sync::{mpsc, oneshot};
 
@@ -551,6 +552,7 @@ impl SignalStream {
     where
         S: Unpin + Send + 'static,
         WebSocketStream<S>: Sink<Message> + Unpin + Send + 'static,
+        <WebSocketStream<S> as Sink<Message>>::Error: Into<SignalError> + Debug,
     {
         while let Some(msg) = internal_rx.recv().await {
             match msg {
