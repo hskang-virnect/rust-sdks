@@ -14,7 +14,7 @@
 
 use futures_util::{
     stream::{SplitSink, SplitStream},
-    SinkExt, StreamExt,
+    SinkExt, StreamExt, Sink, Stream,
 };
 use livekit_protocol as proto;
 use livekit_runtime::{JoinHandle, TcpStream};
@@ -547,8 +547,10 @@ impl SignalStream {
     async fn write_task<S>(
         mut internal_rx: mpsc::Receiver<InternalMessage>,
         mut ws_writer: SplitSink<WebSocketStream<S>, Message>,
-    ) where
+    )
+    where
         S: Unpin + Send + 'static,
+        WebSocketStream<S>: Sink<Message> + Unpin + Send + 'static,
     {
         while let Some(msg) = internal_rx.recv().await {
             match msg {
@@ -584,6 +586,7 @@ impl SignalStream {
         emitter: mpsc::UnboundedSender<Box<proto::signal_response::Message>>,
     ) where
         S: Unpin + Send + 'static,
+        WebSocketStream<S>: Stream<Item = Result<Message, WsError>> + Unpin + Send + 'static,
     {
         while let Some(msg) = ws_reader.next().await {
             match msg {
