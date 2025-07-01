@@ -44,6 +44,9 @@ fn main() {
         }
         "android" => {
             webrtc_sys_build::configure_jni_symbols().unwrap();
+            cc::Build::new()
+                .file("src/bcmp_shim.c")
+                .compile("bcmp_shim");
         }
         "macos" | "ios" => {
             println!("cargo:rustc-link-arg=-ObjC");
