@@ -41,6 +41,7 @@ jni = "0.21.1"
 
 [build-dependencies]
 webrtc-sys-build = { workspace = true }
+cc = "1.0"
 
 [dev-dependencies]
 livekit-api = { workspace = true }
