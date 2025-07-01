@@ -24,16 +24,10 @@ bool livekit_ffi_drop_handle(FfiHandleId handle_id);
 } // extern "C"
 
 #ifdef __ANDROID__
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include <string.h>
 static inline int bcmp(const void *a, const void *b, size_t n) {
     return memcmp(a, b, n);
 }
-#ifdef __cplusplus
-}
-#endif
 #endif
 
 #endif // livekit_ffi
