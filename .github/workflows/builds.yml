@@ -79,6 +79,12 @@ jobs:
         with:
           toolchain: stable
           target: ${{ matrix.target }}
+      
+      - name: Set up Android NDK
+        if: ${{ contains(matrix.target, 'android') }}
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r24d
 
       - name: Build (Cargo)
         if: ${{ !contains(matrix.target, 'android') }}
