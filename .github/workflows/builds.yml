@@ -84,7 +84,7 @@ jobs:
         if: ${{ contains(matrix.target, 'android') }}
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r24
+          ndk-version: r24a
 
       - name: Build (Cargo)
         if: ${{ !contains(matrix.target, 'android') }}
