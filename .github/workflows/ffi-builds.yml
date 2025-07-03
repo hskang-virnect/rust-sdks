@@ -158,7 +158,7 @@ jobs:
         if: ${{ matrix.platform == 'android' }}
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r24a
+          ndk-version: r27c
 
       # on android use cargo ndk
       - name: Build (Android)
