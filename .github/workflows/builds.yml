@@ -84,7 +84,7 @@ jobs:
         if: ${{ contains(matrix.target, 'android') }}
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r27c
+          ndk-version: r24
 
       - name: Build (Cargo)
         if: ${{ !contains(matrix.target, 'android') }}
@@ -96,4 +96,4 @@ jobs:
         run: |
           ln -sf $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/lib/${{ matrix.ndk_arch }}/{libunwind.so,libc++abi.a} $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/lib/
           cargo install cargo-ndk
-          cargo ndk --target ${{ matrix.target }} build --release -p livekit --workspace -vv
+          cargo ndk --target ${{ matrix.target }} build --release --no-default-features --features "rustls-tls-webpki-roots" -p livekit --workspace
