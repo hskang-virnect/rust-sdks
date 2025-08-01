@@ -1657,6 +1657,7 @@ dependencies = [
  "rand 0.9.0",
  "reqwest",
  "rustls-native-certs",
+ "rustls-pemfile",
  "scopeguard",
  "serde",
  "serde_json",
@@ -1673,6 +1674,7 @@ name = "livekit-ffi"
 version = "0.12.26"
 dependencies = [
  "bytes",
+ "cc",
  "console-subscriber",
  "dashmap",
  "downcast-rs",

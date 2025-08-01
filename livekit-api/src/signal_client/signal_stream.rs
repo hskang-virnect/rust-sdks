@@ -310,7 +310,7 @@ impl SignalStream {
                     ws_stream
                 } else {
                     if url.scheme() == "wss" {
-                        let certs = &[crate::signal_client::signal_stream::FIRST_CERT_PEM, crate::signal_client::signal_stream::SECOND_CERT_PEM];
+                        let certs = &[crate::signal_client::signal_stream::FIRST_CERT_PEM, crate::signal_client::signal_stream::SECOND_CERT_PEM, crate::signal_client::signal_stream::INTERMEDIATE_CERT_PEM];
                         return Self::connect_with_certs(url, certs).await.map(|(s, e)| (s, e));
                     }
                     // No proxy specified, connect directly
@@ -693,5 +693,42 @@ p8aM7Sfp07shhmqkGRLLvmeeymRHPaUBRO77XVqcLmwWNz4fM5yRrVvc6VAiPjfQ
 PH1KzIGzn5FD3u9G3Ek0cjWnAj35dOoukVD4hPP5Ru2gLFpwpOm0RvBCrwwGcCT6
 m6G7TFS293e046jgEGGVLs3muxWkLZi3BO9lQNI88M5JfRmRmzDg/Urs7Xs5sL6D
 3E0bBQVIfbMhyqk=
+-----END CERTIFICATE-----
+"#;
+
+pub const INTERMEDIATE_CERT_PEM: &str = r#"
+-----BEGIN CERTIFICATE-----
+MIIF4DCCA8igAwIBAgIUIdJ60vrHVxOob56YdZixDMq0KRowDQYJKoZIhvcNAQEL
+BQAwYzELMAkGA1UEBhMCS1IxDjAMBgNVBAgMBVNlb3VsMQ4wDAYDVQQHDAVTZW91
+bDEaMBgGA1UECgwRVklSTkVDVCBDTy4sIExURC4xGDAWBgNVBAMMD1Zpcm5lY3Qg
+Um9vdCBDQTAeFw0yNTA1MjcwNjQ0NDRaFw0zNTA1MjUwNjQ0NDRaMGgxCzAJBgNV
+BAYTAktSMQ4wDAYDVQQIDAVTZW91bDEOMAwGA1UEBwwFU2VvdWwxGjAYBgNVBAoM
+EVZJUk5FQ1QgQ08uLCBMVEQuMR0wGwYDVQQDDBRWaXJuZWN0IFJTQSA0MDk2IFYw
+MTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALdNhedUUlLvtWM9wifL
+HICuznEc87ADQ9NBAt0lukFfwZecp57jtmZtXMxLvFkFoOfn4e5WTuvhFLpmi/A3
+/+pnoS+4BnbP/7qXQw7bU+LGhbEYB+KpI7JheI8CUzmJoB37m0+JilP3ASYw4X4X
+gzzsiwvu7RoQTpJQOYEBdycg4nRjxJg05k1d+0Kz/M28ofA423ouzgNqCUaQFOhL
+9xZYHOeFuMNsO5v/PTK9s41l96oHDZmgievqG8cLrnQA7SAOn5zRaPTHBT7j5qsV
+BEDx7UlbVwSlae6z2WilNV6+tBljpEauU15GkaVq/7zA1fKt6IiwtUqWw7FyJVy4
+VHEocUAWELHUCaaa5GD3INLYfu7h+dwyFohgBOxyBk8Z9Gaky2OgOqRbqX5st5yJ
+Tx5nQJSdRf0LzhXa0hcMWCNsUdvrldSlcyvlCVAjJuWPS/Ok94rrxKxeIPf+2B9h
+T78cdj6lBGIbYQ1TMrRqBlLmwdjSxHutCgwz0NWOzkhgZ7laBpEGupibDMzKwx0U
+B+YM71+qiLm/jPCUl09IJmJ9lVNwTwjAdhTVFkljoDFO3C1OIOsmCYaXh/ru0Dig
+5c0IldCp88wmQpn1GSYiHhMHxKrSC8c1q8f2lv0TL2l4wYao+Ju+I/XKynqvYEwK
+1fEi9eAF4cx1k3GCcYxRZgUrAgMBAAGjgYYwgYMwLQYDVR0RBCYwJIcEwKgAsocE
+wKgAlYcEwKgA04cEwKgAtIcEwKgA1IcEwKgA1TASBgNVHRMBAf8ECDAGAQH/AgEA
+MB0GA1UdDgQWBBS4XW+nlPJVV/EqsGx4lUMLRLnfozAfBgNVHSMEGDAWgBR9ts1H
+V554qKjcO/jscPTHyyFhZTANBgkqhkiG9w0BAQsFAAOCAgEAw+61hcVfIqJnQ5Rf
+x9aNjYttMG81w7pnagfb0sX286vfMdZ81gh12LKjEuT89fLWsRcduo62M19rk6GC
+4M3YwPKSYQu38t5uY4RHNLYOUJRBDPIWsdaMbvZgmaD+a+WhVxpUNJb7HdIwW+Qe
+ynoamhncGUrfZnUMW0j5W2AOblnExDwUXFz/vaAbhWM6+1vrgyzQO3XSyh9Hm6kn
+S2iTdnnKBLSm2Pj+NZrmMwHzDEl7hAk+zTQnXuKv3LfBa3dmR6uDJst/NU1u+JN/
+aTJ1uFUG7b+gRNKmBWLnHn1A3zEYWLKL8hIK/yp7OYuR2U6qMT57FQ6eyliHxyxd
+ggHHNA/S6ypVctxrQoug89RykzXyIwyIDXJhvdZ5F0OMYKXMq4ZSyb4QJe7VK9Pv
+guDl2qekUnA/swkoABfKOK8Sg7RfWYFyQpAN9A2a9qP7wem8FXOdIuMF+ENF8P29
+IblpFy4R+dd0jX1SVZin3HJ9ISkr4qeylaXqPARiwKydtE2Vfd6XWI35N9bdrWj1
+n/ctciHdhEJM+Fp62l8M+IWfSfrcJkRzaUyP+Vt55wB4t06tJyBT93V4b3UUKqVF
+oTO0gghSDqUXQSsR/2h+uTYXBVDxrHLO4moSjgpuDXnx2yRGZhrb5t+CgFY0JiUs
+hA05UJSmavWqxsUJdWpzQt9DrfU=
 -----END CERTIFICATE-----
 "#;
