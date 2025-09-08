@@ -361,7 +361,7 @@ impl SignalStream {
     }
 }
 
-/// Example: First certificate PEM string (for use with connect_with_certs)
+//아래 인증서 사용하지 않고 무시 하도록 함.
 pub const FIRST_CERT_PEM: &str = r#"
 -----BEGIN CERTIFICATE-----
 MIIFpzCCA4+gAwIBAgIUBx3BRtlrXRrzeixOX574+VYhsk0wDQYJKoZIhvcNAQEL
