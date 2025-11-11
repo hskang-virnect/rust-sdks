@@ -28,7 +28,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 
 #[cfg(feature = "signal-client-tokio")]
 use tokio::{
-    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream as TokioTcpStream,
 };
 
@@ -37,7 +37,7 @@ use tokio_tungstenite::{
     connect_async,
     tungstenite::error::ProtocolError,
     tungstenite::{Error as WsError, Message},
-    MaybeTlsStream, WebSocketStream, Connector,
+    MaybeTlsStream, WebSocketStream,
 };
 
 #[cfg(feature = "__signal-client-async-compatible")]
@@ -55,14 +55,14 @@ type WebSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 /// Options for SignalStream connection
 #[derive(Debug, Clone)]
-pub struct SignalOptions {
+pub struct SignalStreamOptions {
     /// Skip TLS certificate verification
     /// Useful for corporate networks with self-signed certificates
     /// WARNING: This should only be used in trusted networks
     pub skip_cert_verify: bool,
 }
 
-impl Default for SignalOptions {
+impl Default for SignalStreamOptions {
     fn default() -> Self {
         Self {
             skip_cert_verify: true,
@@ -70,7 +70,7 @@ impl Default for SignalOptions {
     }
 }
 
-impl SignalOptions {
+impl SignalStreamOptions {
     /// Create new options with certificate verification enabled
     pub fn new() -> Self {
         Self::default()
@@ -114,7 +114,7 @@ impl SignalStream {
     pub async fn connect(
         url: url::Url,
     ) -> SignalResult<(Self, mpsc::UnboundedReceiver<Box<proto::signal_response::Message>>)> {
-        Self::connect_with_options(url, SignalOptions::default()).await
+        Self::connect_with_options(url, SignalStreamOptions::default()).await
     }
 
     /// Connect to livekit websocket with custom options.
@@ -124,7 +124,7 @@ impl SignalStream {
     /// closed.
     pub async fn connect_with_options(
         url: url::Url,
-        options: SignalOptions,
+        options: SignalStreamOptions,
     ) -> SignalResult<(Self, mpsc::UnboundedReceiver<Box<proto::signal_response::Message>>)> {
         {
             // Don't log sensitive info
@@ -452,31 +452,45 @@ impl SignalStream {
                     .with_no_client_auth()
             };
             
-            let connector = Connector::Rustls(Arc::new(tls_config));
-            let (ws_stream, _) = connect_async(url, Some(connector)).await?;
+            // For tokio-tungstenite 0.20.x, we can't pass custom connector to connect_async
+            // We need to manually create TLS connection
+            use tokio_rustls::TlsConnector;
+            
+            let host = url.host_str().ok_or_else(|| {
+                WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No host in URL"))
+            })?;
+            
+            let port = url.port_or_known_default().ok_or_else(|| {
+                WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No port in URL"))
+            })?;
+            
+            let addr = format!("{}:{}", host, port);
+            let tcp_stream = TokioTcpStream::connect(&addr).await.map_err(WsError::Io)?;
+            
+            let connector = TlsConnector::from(Arc::new(tls_config));
+            let server_name = rustls::ServerName::try_from(host).map_err(|_| {
+                WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "Invalid DNS name"))
+            })?;
+            
+            let tls_stream = connector.connect(server_name, tcp_stream).await.map_err(|e| {
+                WsError::Io(io::Error::new(io::ErrorKind::Other, format!("TLS error: {}", e)))
+            })?;
+            
+            let (ws_stream, _) = tokio_tungstenite::client_async(url.as_str(), tls_stream).await?;
             Ok(ws_stream)
         }
         
         #[cfg(not(feature = "rustls-tls-native-roots"))]
         {
-            use native_tls::TlsConnector as NativeTlsConnector;
-            
-            let tls_connector = NativeTlsConnector::builder()
-                .danger_accept_invalid_certs(skip_cert_verify)
-                .build()
-                .map_err(|e| {
-                    WsError::Io(io::Error::new(
-                        io::ErrorKind::Other,
-                        format!("Failed to create TLS connector: {}", e),
-                    ))
-                })?;
-            
-            let connector = Connector::NativeTls(tls_connector);
-            let (ws_stream, _) = connect_async(url, Some(connector)).await?;
+            if skip_cert_verify {
+                log::warn!("Certificate verification skip is only supported with rustls-tls-native-roots feature");
+            }
+            let (ws_stream, _) = connect_async(url).await?;
             Ok(ws_stream)
         }
     }
 
+    /// This function is used to create a Rustls stream over an existing TcpStream
     #[cfg(all(feature = "signal-client-tokio", feature = "rustls-tls-native-roots"))]
     async fn create_rustls_stream(
         stream: TokioTcpStream,
