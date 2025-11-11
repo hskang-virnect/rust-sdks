@@ -34,7 +34,6 @@ use tokio::{
 
 #[cfg(feature = "signal-client-tokio")]
 use tokio_tungstenite::{
-    connect_async,
     tungstenite::error::ProtocolError,
     tungstenite::{Error as WsError, Message},
     MaybeTlsStream, WebSocketStream,
@@ -412,10 +411,18 @@ impl SignalStream {
 
     #[cfg(feature = "signal-client-tokio")]
     async fn connect_direct(url: url::Url, skip_cert_verify: bool) -> Result<WebSocket, WsError> {
+        // For non-TLS (ws://) connections, use default connect_async
+        if url.scheme() == "ws" {
+            let (ws_stream, _) = tokio_tungstenite::connect_async(url).await?;
+            return Ok(ws_stream);
+        }
+        
+        // For TLS (wss://) connections
         #[cfg(feature = "rustls-tls-native-roots")]
         {
             use std::sync::Arc;
             use tokio_rustls::rustls;
+            use tokio_rustls::TlsConnector;
             
             let tls_config = if skip_cert_verify {
                 rustls::ClientConfig::builder()
@@ -452,10 +459,6 @@ impl SignalStream {
                     .with_no_client_auth()
             };
             
-            // For tokio-tungstenite 0.20.x, we can't pass custom connector to connect_async
-            // We need to manually create TLS connection
-            use tokio_rustls::TlsConnector;
-            
             let host = url.host_str().ok_or_else(|| {
                 WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No host in URL"))
             })?;
@@ -476,7 +479,9 @@ impl SignalStream {
                 WsError::Io(io::Error::new(io::ErrorKind::Other, format!("TLS error: {}", e)))
             })?;
             
-            let (ws_stream, _) = tokio_tungstenite::client_async(url.as_str(), tls_stream).await?;
+            // Wrap in MaybeTlsStream
+            let stream = MaybeTlsStream::Rustls(tls_stream);
+            let (ws_stream, _) = tokio_tungstenite::client_async(url.as_str(), stream).await?;
             Ok(ws_stream)
         }
         
@@ -485,7 +490,7 @@ impl SignalStream {
             if skip_cert_verify {
                 log::warn!("Certificate verification skip is only supported with rustls-tls-native-roots feature");
             }
-            let (ws_stream, _) = connect_async(url).await?;
+            let (ws_stream, _) = tokio_tungstenite::connect_async(url).await?;
             Ok(ws_stream)
         }
     }

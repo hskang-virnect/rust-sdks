@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::http_client;
 
-use super::{get_livekit_url, SignalError, SignalResult};
+use super::{SignalError, SignalResult};
 
 pub struct RegionUrlProvider;
 
