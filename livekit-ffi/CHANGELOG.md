@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.40](https://github.com/hskang-virnect/rust-sdks/compare/rust-sdks/livekit-ffi@0.12.39...rust-sdks/livekit-ffi@0.12.40) - 2025-11-11
+
+### Other
+
+- change the livekit-ffi to output a static lib for cpp SDK ([#781](https://github.com/hskang-virnect/rust-sdks/pull/781))
+- E2E RPC tests ([#769](https://github.com/hskang-virnect/rust-sdks/pull/769))
+- Remove unused dependencies ([#761](https://github.com/hskang-virnect/rust-sdks/pull/761))
+
 ## [0.12.39](https://github.com/livekit/rust-sdks/compare/rust-sdks/livekit-ffi@0.12.38...rust-sdks/livekit-ffi@0.12.39) - 2025-10-27
 
 ### Fixed
