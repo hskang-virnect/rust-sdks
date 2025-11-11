@@ -41,6 +41,7 @@ mod region;
 mod signal_stream;
 
 pub use region::RegionUrlProvider;
+pub use signal_stream::SignalOptions;
 
 pub type SignalEmitter = mpsc::UnboundedSender<SignalEvent>;
 pub type SignalEvents = mpsc::UnboundedReceiver<SignalEvent>;
