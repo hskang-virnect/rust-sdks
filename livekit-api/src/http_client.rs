@@ -5,6 +5,16 @@ mod tokio {
 
     #[cfg(feature = "services-tokio")]
     pub use reqwest::Client;
+
+    #[cfg(feature = "services-tokio")]
+    impl Client {
+        pub fn new() -> Self {
+            reqwest::Client::builder()
+                .http1_only()
+                .build()
+                .expect("Failed to build HTTP client")
+        }
+    }
 }
 
 #[cfg(any(feature = "services-tokio", feature = "signal-client-tokio"))]
@@ -78,7 +88,14 @@ mod async_std {
 
         impl Client {
             pub fn new() -> Self {
-                Self(isahc::HttpClient::new().unwrap())
+                use isahc::config::VersionNegotiation;
+                
+                Self(
+                    isahc::HttpClient::builder()
+                        .version_negotiation(VersionNegotiation::http11())
+                        .build()
+                        .unwrap()
+                )
             }
         }
 
