@@ -129,6 +129,12 @@ jobs:
         if: ${{ matrix.platform == 'ios' }}
         run: |
           cd livekit-ffi
+          # iOS Simulator 타겟인 경우 환경변수 설정
+          if [[ "${{ matrix.target }}" == *"-sim" ]]; then
+            export SDKROOT=$(xcrun --sdk iphonesimulator --show-sdk-path)
+            export CFLAGS_aarch64_apple_ios_sim="--target=arm64-apple-ios15.0-simulator -isysroot $SDKROOT"
+            export CXXFLAGS_aarch64_apple_ios_sim="--target=arm64-apple-ios15.0-simulator -isysroot $SDKROOT"
+          fi
           cargo build --release --target ${{ matrix.target }} ${{ matrix.buildargs }}
 
       - name: Build (Windows)
