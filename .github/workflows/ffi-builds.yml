@@ -128,9 +128,8 @@ jobs:
       - name: Build (iOS)
         if: ${{ matrix.platform == 'ios' }}
         env:
-          CRATE_CC_NO_DEFAULTS: "1"
           RUSTFLAGS: "-C embed-bitcode=no"
-          IPHONEOS_DEPLOYMENT_TARGET: "12.0"
+          IPHONEOS_DEPLOYMENT_TARGET: "13.0"
         run: |
           cd livekit-ffi
           rustup target add ${{ matrix.target }}
