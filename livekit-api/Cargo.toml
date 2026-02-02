@@ -19,6 +19,7 @@ signal-client-tokio = [
     "livekit-runtime/tokio",
     "dep:base64",
     "dep:tokio-rustls",
+    "dep:rustls",
     "dep:rustls-pemfile",
     "dep:rustls-native-certs"
 ]
@@ -94,7 +95,7 @@ livekit-runtime = { workspace = true, optional = true}
 tokio-tungstenite = { version = "0.20", optional = true }
 async-tungstenite = { version = "0.25.0", features = [ "async-std-runtime", "async-native-tls"], optional = true }
 tokio = { version = "1", default-features = false, features = ["sync", "macros", "signal", "io-util", "net"], optional = true }
-tokio-rustls = { version = "0.24", optional = true }
+tokio-rustls = { version = "0.24", optional = true, features = ["dangerous_configuration"] }
 rustls-native-certs = { version = "0.6", optional = true }
 rustls-pemfile = { version = "1.0", optional = true }
 futures-util = { version = "0.3", default-features = false, features = [ "sink" ], optional = true }
@@ -106,3 +107,5 @@ isahc = { version = "1.7.2", default-features = false, features = [ "json", "tex
 
 scopeguard = "1.2.0"
 rand = "0.9.0"
+
+rustls = { version = "0.21.10", features = ["dangerous_configuration"], optional = true }
