@@ -1,10 +1,32 @@
 #[cfg(any(feature = "services-tokio", feature = "signal-client-tokio"))]
 mod tokio {
     #[cfg(feature = "signal-client-tokio")]
-    pub use reqwest::get;
+    pub async fn get(url: &str) -> Result<reqwest::Response, reqwest::Error> {
+        Client::new().get(url).send().await
+    }
 
-    #[cfg(feature = "services-tokio")]
-    pub use reqwest::Client;
+    #[cfg(any(feature = "services-tokio", feature = "signal-client-tokio"))]
+    #[derive(Debug, Clone)]
+    pub struct Client(reqwest::Client);
+
+    #[cfg(any(feature = "services-tokio", feature = "signal-client-tokio"))]
+    impl Client {
+        pub fn new() -> Self {
+            let client = reqwest::Client::builder()
+                .http1_only()
+                .build()
+                .expect("failed to build http client");
+            Self(client)
+        }
+
+        pub fn get<U: reqwest::IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
+            self.0.get(url)
+        }
+
+        pub fn post<U: reqwest::IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
+            self.0.post(url)
+        }
+    }
 }
 
 #[cfg(any(feature = "services-tokio", feature = "signal-client-tokio"))]
@@ -83,6 +105,14 @@ mod async_std {
         }
 
         impl Client {
+            pub fn get<S: AsRef<str>>(&self, url: S) -> RequestBuilder {
+                RequestBuilder {
+                    body: Vec::new(),
+                    builder: isahc::http::Request::get(url.as_ref()),
+                    client: self.0.clone(),
+                }
+            }
+
             pub fn post(&self, url: Url) -> RequestBuilder {
                 RequestBuilder {
                     body: Vec::new(),

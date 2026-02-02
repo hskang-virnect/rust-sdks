@@ -283,14 +283,49 @@ impl SignalInner {
             segs.extend(&["rtc", "validate"]);
         }
 
-        if let Ok(res) = http_client::get(ws_url.as_str()).await {
-            let status = res.status();
-            let body = res.text().await.ok().unwrap_or_default();
+        let mut log_url = ws_url.clone();
+        let filtered_pairs: Vec<_> = log_url
+            .query_pairs()
+            .filter(|(key, _)| key != "access_token")
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
 
-            if status.is_client_error() {
-                return Err(SignalError::Client(status, body));
-            } else if status.is_server_error() {
-                return Err(SignalError::Server(status, body));
+        {
+            let mut query_pairs = log_url.query_pairs_mut();
+            query_pairs.clear();
+            for (key, value) in filtered_pairs {
+                query_pairs.append_pair(&key, &value);
+            }
+
+            query_pairs.append_pair("access_token", "...");
+        }
+
+        log::info!("rtc/validate request: {}", log_url);
+
+        match http_client::get(ws_url.as_str()).await {
+            Ok(res) => {
+                let status = res.status();
+                let body = res.text().await.ok().unwrap_or_default();
+                let body_preview = if body.len() > 1024 {
+                    format!("{}...[truncated]", &body[..1024])
+                } else {
+                    body.clone()
+                };
+
+                log::info!(
+                    "rtc/validate response: status={}, body={}",
+                    status,
+                    body_preview
+                );
+
+                if status.is_client_error() {
+                    return Err(SignalError::Client(status, body));
+                } else if status.is_server_error() {
+                    return Err(SignalError::Server(status, body));
+                }
+            }
+            Err(err) => {
+                log::warn!("rtc/validate request failed: {}", err);
             }
         }
 

@@ -291,8 +291,13 @@ impl SignalStream {
                     };
 
                     // Now perform WebSocket handshake over the established connection
-                    let (ws_stream, _) =
+                    let (ws_stream, response) =
                         tokio_tungstenite::client_async_with_config(url, stream, None).await?;
+                    log::info!(
+                        "websocket handshake response (proxy): status={}, headers={:?}",
+                        response.status(),
+                        response.headers()
+                    );
                     ws_stream
                 } else {
                     // Empty proxy URL, connect directly
@@ -307,7 +312,13 @@ impl SignalStream {
         };
 
         #[cfg(not(feature = "signal-client-tokio"))]
-        let (ws_stream, _) = connect_async(url).await?;
+        let (ws_stream, response) = connect_async(url).await?;
+        #[cfg(not(feature = "signal-client-tokio"))]
+        log::info!(
+            "websocket handshake response (async): status={}, headers={:?}",
+            response.status(),
+            response.headers()
+        );
         let (ws_writer, ws_reader) = ws_stream.split();
 
         let (emitter, events) = mpsc::unbounded_channel();
@@ -413,7 +424,12 @@ impl SignalStream {
     async fn connect_direct(url: url::Url, skip_cert_verify: bool) -> Result<WebSocket, WsError> {
         // For non-TLS (ws://) connections, use default connect_async
         if url.scheme() == "ws" {
-            let (ws_stream, _) = tokio_tungstenite::connect_async(url).await?;
+            let (ws_stream, response) = tokio_tungstenite::connect_async(url).await?;
+            log::info!(
+                "websocket handshake response (ws): status={}, headers={:?}",
+                response.status(),
+                response.headers()
+            );
             return Ok(ws_stream);
         }
         
@@ -481,7 +497,13 @@ impl SignalStream {
             
             // Wrap in MaybeTlsStream
             let stream = MaybeTlsStream::Rustls(tls_stream);
-            let (ws_stream, _) = tokio_tungstenite::client_async(url.as_str(), stream).await?;
+            let (ws_stream, response) =
+                tokio_tungstenite::client_async(url.as_str(), stream).await?;
+            log::info!(
+                "websocket handshake response (wss): status={}, headers={:?}",
+                response.status(),
+                response.headers()
+            );
             Ok(ws_stream)
         }
         
@@ -490,7 +512,12 @@ impl SignalStream {
             if skip_cert_verify {
                 log::warn!("Certificate verification skip is only supported with rustls-tls-native-roots feature");
             }
-            let (ws_stream, _) = tokio_tungstenite::connect_async(url).await?;
+            let (ws_stream, response) = tokio_tungstenite::connect_async(url).await?;
+            log::info!(
+                "websocket handshake response (wss-fallback): status={}, headers={:?}",
+                response.status(),
+                response.headers()
+            );
             Ok(ws_stream)
         }
     }
