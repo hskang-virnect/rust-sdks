@@ -127,13 +127,9 @@ jobs:
 
       - name: Build (iOS)
         if: ${{ matrix.platform == 'ios' }}
-        env:
-          RUSTFLAGS: "-C embed-bitcode=no"
-        run: cd livekit-ffi && cargo rustc \
-          --crate-type staticlib \
-          --release \
-          --target ${{ matrix.target }} \
-          ${{ matrix.buildargs }}
+        run: |
+          cd livekit-ffi
+          cargo build --release --target ${{ matrix.target }} ${{ matrix.buildargs }}
 
       - name: Build (Windows)
         if: ${{ matrix.platform == 'windows' }}
