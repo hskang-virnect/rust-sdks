@@ -131,6 +131,9 @@ jobs:
         #env:
         #  IPHONEOS_DEPLOYMENT_TARGET: ${{ matrix.iphoneos_deployment_target }}
         # run: cd livekit-ffi && cargo build --release --target ${{ matrix.target }} ${{ matrix.buildargs }}
+        env:
+          CFLAGS_aarch64_apple_ios_sim: "-fno-embed-bitcode"
+          CXXFLAGS_aarch64_apple_ios_sim: "-fno-embed-bitcode"
         run: cd livekit-ffi && cargo rustc --crate-type staticlib --release --target ${{ matrix.target }} ${{ matrix.buildargs }}
 
       - name: Build (Windows)
