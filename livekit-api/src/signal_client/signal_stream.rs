@@ -239,6 +239,9 @@ impl SignalStream {
             .with_safe_defaults()
             .with_root_certificates(root_store)
             .with_no_client_auth();
+
+        config.alpn_protocols = vec![b"http/1.1".to_vec()];
+        
         config
             .dangerous()
             .set_certificate_verifier(std::sync::Arc::new(NoCertificateVerification));
