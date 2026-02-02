@@ -127,14 +127,14 @@ jobs:
 
       - name: Build (iOS)
         if: ${{ matrix.platform == 'ios' }}
-        # TODO(theomonnom): Seems like this is causing issues with the linker (let’s ignore for now)
-        #env:
-        #  IPHONEOS_DEPLOYMENT_TARGET: ${{ matrix.iphoneos_deployment_target }}
-        # run: cd livekit-ffi && cargo build --release --target ${{ matrix.target }} ${{ matrix.buildargs }}
         env:
-          CFLAGS_aarch64_apple_ios_sim: "-fno-embed-bitcode"
-          CXXFLAGS_aarch64_apple_ios_sim: "-fno-embed-bitcode"
-        run: cd livekit-ffi && cargo rustc --crate-type staticlib --release --target ${{ matrix.target }} ${{ matrix.buildargs }}
+          CRATE_CC_NO_DEFAULTS: "1"
+          RUSTFLAGS: "-C embed-bitcode=no"
+          IPHONEOS_DEPLOYMENT_TARGET: "12.0"
+        run: |
+          cd livekit-ffi
+          rustup target add ${{ matrix.target }}
+          cargo rustc --crate-type staticlib --release --target ${{ matrix.target }} ${{ matrix.buildargs }}
 
       - name: Build (Windows)
         if: ${{ matrix.platform == 'windows' }}
