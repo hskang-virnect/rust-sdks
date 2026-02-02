@@ -4,15 +4,27 @@ mod tokio {
     pub use reqwest::get;
 
     #[cfg(feature = "services-tokio")]
-    pub use reqwest::Client;
+    #[derive(Clone, Debug)]
+    pub struct Client(reqwest::Client);
 
     #[cfg(feature = "services-tokio")]
     impl Client {
         pub fn new() -> Self {
-            reqwest::Client::builder()
-                .http1_only()
-                .build()
-                .expect("Failed to build HTTP client")
+            Self(
+                reqwest::Client::builder()
+                    .http1_only()
+                    .build()
+                    .expect("Failed to build HTTP client")
+            )
+        }
+    }
+
+    #[cfg(feature = "services-tokio")]
+    impl std::ops::Deref for Client {
+        type Target = reqwest::Client;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
         }
     }
 }
