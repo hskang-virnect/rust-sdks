@@ -129,11 +129,11 @@ jobs:
         if: ${{ matrix.platform == 'ios' }}
         env:
           RUSTFLAGS: "-C embed-bitcode=no"
-          IPHONEOS_DEPLOYMENT_TARGET: "13.0"
-        run: |
-          cd livekit-ffi
-          rustup target add ${{ matrix.target }}
-          cargo rustc --crate-type staticlib --release --target ${{ matrix.target }} ${{ matrix.buildargs }}
+        run: cd livekit-ffi && cargo rustc \
+          --crate-type staticlib \
+          --release \
+          --target ${{ matrix.target }} \
+          ${{ matrix.buildargs }}
 
       - name: Build (Windows)
         if: ${{ matrix.platform == 'windows' }}
