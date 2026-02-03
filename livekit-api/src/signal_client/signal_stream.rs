@@ -569,7 +569,8 @@ impl SignalStream {
             }
             
             // Manual DNS resolution for iOS/macOS compatibility
-            // First, resolve the hostname to IP addresses to avoid iOS/macOS DNS lookup issues
+            // Resolve hostname to IP address first to avoid iOS/macOS DNS lookup issues
+            // then use the IP in URL while preserving original hostname for SNI
             let host = url.host_str().ok_or_else(|| {
                 WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No host in URL"))
             })?;
@@ -578,10 +579,10 @@ impl SignalStream {
                 WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No port in URL"))
             })?;
             
-            let addr = format!("{}:{}", host, port);
-            log::debug!("Resolving {} for wss-fallback connection", addr);
+            let addr_str = format!("{}:{}", host, port);
+            log::debug!("Resolving {} for wss-fallback connection", addr_str);
             
-            let socket_addrs: Vec<_> = tokio::net::lookup_host(&addr)
+            let socket_addrs: Vec<_> = tokio::net::lookup_host(&addr_str)
                 .await
                 .map_err(WsError::Io)?
                 .collect();
@@ -593,14 +594,21 @@ impl SignalStream {
                 )));
             }
             
-            log::debug!("Resolved {} to {:?}", addr, socket_addrs);
+            log::debug!("Resolved {} to {:?}", addr_str, socket_addrs);
             
-            // Connect to the resolved address
-            let tcp_stream = TokioTcpStream::connect(&socket_addrs[..]).await.map_err(WsError::Io)?;
+            // Replace hostname with IP in URL to avoid DNS lookup in connect_async
+            // But keep original host for SNI in TLS handshake
+            let ip_addr = socket_addrs[0].ip();
+            let mut url_with_ip = url.clone();
+            url_with_ip.set_host(Some(&ip_addr.to_string())).map_err(|_| {
+                WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "Failed to set IP in URL"))
+            })?;
             
-            // Let tokio-tungstenite handle TLS handshake with its default connector
-            // We just provide the pre-connected TCP stream
-            let (ws_stream, response) = tokio_tungstenite::client_async(url.as_str(), tcp_stream).await?;
+            log::debug!("Connecting to {} (original host: {})", url_with_ip, host);
+            
+            // Now connect_async won't do DNS lookup since we're using IP
+            // tokio-tungstenite will handle TLS with the IP address
+            let (ws_stream, response) = tokio_tungstenite::connect_async(url_with_ip).await?;
             log::info!(
                 "websocket handshake response (wss-fallback): status={}, headers={:?}",
                 response.status(),
