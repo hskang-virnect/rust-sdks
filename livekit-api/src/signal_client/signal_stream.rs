@@ -211,7 +211,7 @@ impl SignalStream {
                         return Err(WsError::Io(io::Error::new(
                             io::ErrorKind::Other,
                             format!("Failed to resolve proxy host: {}", proxy_host),
-                        )));
+                        )).into());
                     }
                     
                     log::debug!("Resolved proxy {} to {:?}", proxy_addr, proxy_socket_addrs);
