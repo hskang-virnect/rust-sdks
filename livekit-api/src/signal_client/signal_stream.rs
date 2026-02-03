@@ -567,7 +567,40 @@ impl SignalStream {
             if skip_cert_verify {
                 log::warn!("Certificate verification skip is only supported with rustls-tls-native-roots feature");
             }
-            let (ws_stream, response) = tokio_tungstenite::connect_async(url).await?;
+            
+            // Manual DNS resolution for iOS/macOS compatibility
+            // First, resolve the hostname to IP addresses to avoid iOS/macOS DNS lookup issues
+            let host = url.host_str().ok_or_else(|| {
+                WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No host in URL"))
+            })?;
+            
+            let port = url.port_or_known_default().ok_or_else(|| {
+                WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No port in URL"))
+            })?;
+            
+            let addr = format!("{}:{}", host, port);
+            log::debug!("Resolving {} for wss-fallback connection", addr);
+            
+            let socket_addrs: Vec<_> = tokio::net::lookup_host(&addr)
+                .await
+                .map_err(WsError::Io)?
+                .collect();
+            
+            if socket_addrs.is_empty() {
+                return Err(WsError::Io(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to resolve host: {}", host),
+                )));
+            }
+            
+            log::debug!("Resolved {} to {:?}", addr, socket_addrs);
+            
+            // Connect to the resolved address
+            let tcp_stream = TokioTcpStream::connect(&socket_addrs[..]).await.map_err(WsError::Io)?;
+            
+            // Let tokio-tungstenite handle TLS handshake with its default connector
+            // We just provide the pre-connected TCP stream
+            let (ws_stream, response) = tokio_tungstenite::client_async(url.as_str(), tcp_stream).await?;
             log::info!(
                 "websocket handshake response (wss-fallback): status={}, headers={:?}",
                 response.status(),
