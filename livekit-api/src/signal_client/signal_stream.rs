@@ -201,8 +201,22 @@ impl SignalStream {
                     let proxy_port = proxy_url.port_or_known_default().unwrap_or(80);
                     let proxy_addr = format!("{}:{}", proxy_host, proxy_port);
 
+                    // Use tokio's lookup_host for proxy connection (fixes iOS/macOS DNS issues)
+                    let proxy_socket_addrs: Vec<_> = tokio::net::lookup_host(&proxy_addr)
+                        .await
+                        .map_err(WsError::Io)?
+                        .collect();
+                    
+                    if proxy_socket_addrs.is_empty() {
+                        return Err(WsError::Io(io::Error::new(
+                            io::ErrorKind::Other,
+                            format!("Failed to resolve proxy host: {}", proxy_host),
+                        )));
+                    }
+                    
+                    log::debug!("Resolved proxy {} to {:?}", proxy_addr, proxy_socket_addrs);
                     let mut proxy_stream =
-                        TokioTcpStream::connect(proxy_addr).await.map_err(WsError::Io)?;
+                        TokioTcpStream::connect(&proxy_socket_addrs[..]).await.map_err(WsError::Io)?;
 
                     let mut proxy_auth_header = None;
                     if let Some(password) = proxy_url.password() {
@@ -422,9 +436,34 @@ impl SignalStream {
 
     #[cfg(feature = "signal-client-tokio")]
     async fn connect_direct(url: url::Url, skip_cert_verify: bool) -> Result<WebSocket, WsError> {
-        // For non-TLS (ws://) connections, use default connect_async
+        // For non-TLS (ws://) connections, manually resolve and connect
+        // to avoid iOS/macOS DNS lookup issues
         if url.scheme() == "ws" {
-            let (ws_stream, response) = tokio_tungstenite::connect_async(url).await?;
+            let host = url.host_str().ok_or_else(|| {
+                WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No host in URL"))
+            })?;
+            
+            let port = url.port_or_known_default().ok_or_else(|| {
+                WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No port in URL"))
+            })?;
+            
+            let addr = format!("{}:{}", host, port);
+            let socket_addrs: Vec<_> = tokio::net::lookup_host(&addr)
+                .await
+                .map_err(WsError::Io)?
+                .collect();
+            
+            if socket_addrs.is_empty() {
+                return Err(WsError::Io(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to resolve host: {}", host),
+                )));
+            }
+            
+            log::debug!("Resolved {} to {:?}", addr, socket_addrs);
+            let tcp_stream = TokioTcpStream::connect(&socket_addrs[..]).await.map_err(WsError::Io)?;
+            let stream = MaybeTlsStream::Plain(tcp_stream);
+            let (ws_stream, response) = tokio_tungstenite::client_async(url.as_str(), stream).await?;
             log::info!(
                 "websocket handshake response (ws): status={}, headers={:?}",
                 response.status(),
@@ -483,8 +522,24 @@ impl SignalStream {
                 WsError::Io(io::Error::new(io::ErrorKind::InvalidInput, "No port in URL"))
             })?;
             
+            // Use tokio's lookup_host to explicitly resolve DNS before connecting
+            // This fixes iOS/macOS DNS resolution issues where direct string-based
+            // connect() fails with "nodename nor servname provided, or not known"
             let addr = format!("{}:{}", host, port);
-            let tcp_stream = TokioTcpStream::connect(&addr).await.map_err(WsError::Io)?;
+            let socket_addrs: Vec<_> = tokio::net::lookup_host(&addr)
+                .await
+                .map_err(WsError::Io)?
+                .collect();
+            
+            if socket_addrs.is_empty() {
+                return Err(WsError::Io(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to resolve host: {}", host),
+                )));
+            }
+            
+            log::debug!("Resolved {} to {:?}", addr, socket_addrs);
+            let tcp_stream = TokioTcpStream::connect(&socket_addrs[..]).await.map_err(WsError::Io)?;
             
             let connector = TlsConnector::from(Arc::new(tls_config));
             let server_name = rustls::ServerName::try_from(host).map_err(|_| {
